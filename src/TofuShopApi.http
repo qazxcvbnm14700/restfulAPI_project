@@ -39,3 +39,7 @@ Content-Type: application/json
 ### 查詢訂單
 GET {{TofuShopApi_HostAddress}}/api/orders/ORD-20261016-001
 Accept: application/json
+
+### 依預估製作時間同步訂單狀態
+PATCH {{TofuShopApi_HostAddress}}/api/orders/ORD-20261016-001/status
+Accept: application/json

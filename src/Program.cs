@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOpenApi();
 
 // 開發與測試支援 CORS 與靜態檔案
 builder.Services.AddCors(options =>
@@ -13,38 +13,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
-var app = builder.Build();
-
-app.UseCors();
-
-// 支援自動偵測 web/wwwroot 靜態檔案目錄 (支援從 /src 執行或從 /web/bin 執行)
-string[] searchPaths = new[]
-{
-    Path.Combine(AppContext.BaseDirectory, "..", "wwwroot"),
-    Path.Combine(Directory.GetCurrentDirectory(), "..", "wwwroot"),
-    Path.Combine(Directory.GetCurrentDirectory(), "..", "web", "wwwroot"),
-    Path.Combine(AppContext.BaseDirectory, "wwwroot"),
-    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
-};
-
-string? foundWwwroot = searchPaths
-    .Select(p => Path.GetFullPath(p))
-    .FirstOrDefault(p => Directory.Exists(p) && File.Exists(Path.Combine(p, "index.html")));
-
-if (foundWwwroot != null)
-{
-    var fileServerOptions = new FileServerOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(foundWwwroot),
-        RequestPath = "",
-        EnableDefaultFiles = true
-    };
-    app.UseFileServer(fileServerOptions);
-}
-
-// 記憶體存儲訂單資料
-var ordersDb = new ConcurrentDictionary<string, OrderDetailDto>();
 
 // 菜單資料包含列表和詳細資訊，由不同 API 回傳各自需要的欄位
 var menu = new
@@ -69,6 +37,7 @@ var menu = new
                 ingredients = new[] { "日本靜岡特選鰻魚", "新潟縣產越光米", "百年秘傳照燒汁", "有田山椒粉" },
                 origin = "台灣在地優質外銷無毒鰻魚直送",
                 prepTime = "約 12-15 分鐘",
+                prepTimeMinutes = 15,
                 flavorTags = new[] { "炭火香氣", "油脂豐美", "主廚手作", "人氣 No.1" }
             },
             customOptions = new
@@ -99,6 +68,7 @@ var menu = new
                 ingredients = new[] { "博多極細生麵", "慢火乳化豚骨白湯", "炙燒五花厚切叉燒 (2片)", "黃金流心溏心蛋", "有明海苔", "高知青蔥" },
                 origin = "每日晨起鮮熬黑豚豚骨高湯",
                 prepTime = "約 8-10 分鐘",
+                prepTimeMinutes = 10,
                 flavorTags = new[] { "濃厚白湯", "炙燒焦香", "爆汁溏心", "拉麵魂" }
             },
             customOptions = new
@@ -130,6 +100,7 @@ var menu = new
                 ingredients = new[] { "日本A5黑毛和牛", "淡路島甜洋蔥", "生食級初卵蛋", "新潟越光米", "七味唐辛子" },
                 origin = "日本鹿兒島直送A5黑毛和牛",
                 prepTime = "約 10-12 分鐘",
+                prepTimeMinutes = 12,
                 flavorTags = new[] { "油花如雪", "入口即化", "濃郁蛋香", "奢華盛宴" }
             },
             customOptions = new
@@ -160,6 +131,7 @@ var menu = new
                 ingredients = new[] { "特選厚切黑豚大里肌 (200g)", "日式生麵包粉", "越光米飯", "特調赤味噌湯", "高山高麗菜絲" },
                 origin = "台灣在地優良履歷黑豚",
                 prepTime = "約 12-15 分鐘",
+                prepTimeMinutes = 15,
                 flavorTags = new[] { "厚切紮實", "酥脆金黃", "肉汁噴發", "定食經典" }
             },
             customOptions = new
@@ -190,6 +162,7 @@ var menu = new
                 ingredients = new[] { "挪威深海鮭魚厚切 (5片)", "北海道醬油漬鮭魚卵", "日本大葉紫蘇", "現磨阿里山生山葵", "赤酢壽司飯" },
                 origin = "挪威空運生食級冷藏鮭魚",
                 prepTime = "約 8-10 分鐘",
+                prepTimeMinutes = 10,
                 flavorTags = new[] { "油脂豐美", "爆漿鮭魚卵", "直火炙香", "老饕最愛" }
             },
             customOptions = new
@@ -220,6 +193,7 @@ var menu = new
                 ingredients = new[] { "長野信州二八蕎麥麵", "野生特大草蝦 (2尾)", "時令野菜天婦羅", "枕崎產本枯節柴魚高湯", "鳴門魚板" },
                 origin = "日本長野產蕎麥粉手打製作",
                 prepTime = "約 10-12 分鐘",
+                prepTimeMinutes = 12,
                 flavorTags = new[] { "金黃酥脆", "清甜柴魚高湯", "天然蕎麥香", "溫和順口" }
             },
             customOptions = new
@@ -238,12 +212,55 @@ var menu = new
     }
 };
 
-var menuItems = JsonSerializer.SerializeToElement(menu).GetProperty("items");
+var projectRoot = FindProjectRoot(builder.Environment.ContentRootPath);
+var configuredDatabasePath = builder.Configuration["Database:Path"];
+var databasePath = string.IsNullOrWhiteSpace(configuredDatabasePath)
+    ? Path.Combine(projectRoot, "data", "tofushop.db")
+    : Path.GetFullPath(configuredDatabasePath);
+var store = new SqliteStore(databasePath);
+await store.InitializeAsync(JsonSerializer.SerializeToElement(menu));
+builder.Services.AddSingleton(store);
+builder.Services.AddHostedService<OrderStatusBackgroundService>();
+
+var app = builder.Build();
+
+app.UseCors();
+
+// 支援自動偵測 web/wwwroot 靜態檔案目錄 (支援從 /src 執行或從 /web/bin 執行)
+string[] searchPaths =
+[
+    Path.Combine(AppContext.BaseDirectory, "..", "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "web", "wwwroot"),
+    Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+];
+
+string? foundWwwroot = searchPaths
+    .Select(p => Path.GetFullPath(p))
+    .FirstOrDefault(p => Directory.Exists(p) && File.Exists(Path.Combine(p, "index.html")));
+
+if (foundWwwroot != null)
+{
+    var fileServerOptions = new FileServerOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(foundWwwroot),
+        RequestPath = "",
+        EnableDefaultFiles = true
+    };
+    app.UseFileServer(fileServerOptions);
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
 
 // 1號 API: 菜單卡片清單 (/api/menu)
-app.MapGet("/api/menu", () =>
+app.MapGet("/api/menu", async (CancellationToken cancellationToken) =>
 {
-    var items = menuItems.EnumerateArray().Select(item => new
+    var menuData = await store.GetMenuAsync(cancellationToken);
+    var items = menuData.Items.Select(item => new
     {
         id = item.GetProperty("id").GetString(),
         name = item.GetProperty("name").GetString(),
@@ -257,26 +274,25 @@ app.MapGet("/api/menu", () =>
 
     return Results.Ok(new
     {
-        menu.restaurantName,
-        menu.tagline,
-        menu.categories,
+        restaurantName = menuData.RestaurantName,
+        tagline = menuData.Tagline,
+        categories = menuData.Categories,
         items
     });
 });
 
 // 2號 API: 單一料理詳細資訊與專屬副餐 (/api/menu/{dishId})
-app.MapGet("/api/menu/{dishId}", (string dishId) =>
+app.MapGet("/api/menu/{dishId}", async (string dishId, CancellationToken cancellationToken) =>
 {
-    var item = menuItems.EnumerateArray().FirstOrDefault(item =>
-        string.Equals(item.GetProperty("id").GetString(), dishId, StringComparison.OrdinalIgnoreCase));
+    var item = await store.GetMenuItemAsync(dishId, cancellationToken);
 
-    return item.ValueKind == JsonValueKind.Undefined
+    return item is null
         ? Results.NotFound(new { message = $"找不到料理：{dishId}" })
-        : Results.Ok(item);
+        : Results.Ok(item.Value);
 });
 
-// 2號 API: 建立日式料理新訂單 (/api/orders)
-app.MapPost("/api/orders", (CreateOrderRequest? request) =>
+// 3號 API: 建立日式料理新訂單 (/api/orders)
+app.MapPost("/api/orders", async (CreateOrderRequest? request, CancellationToken cancellationToken) =>
 {
     if (request == null || string.IsNullOrWhiteSpace(request.CustomerName) || string.IsNullOrWhiteSpace(request.Phone))
     {
@@ -292,6 +308,11 @@ app.MapPost("/api/orders", (CreateOrderRequest? request) =>
     var tableNo = request.TableNo?.Trim();
     var address = request.Address?.Trim();
 
+    if (diningType is not ("內用" or "外帶" or "外送"))
+    {
+        return Results.BadRequest(new { success = false, message = "用餐方式無效" });
+    }
+
     if (string.Equals(diningType, "內用", StringComparison.Ordinal) && string.IsNullOrWhiteSpace(tableNo))
     {
         return Results.BadRequest(new { success = false, message = "內用訂單必須填寫桌號" });
@@ -302,30 +323,50 @@ app.MapPost("/api/orders", (CreateOrderRequest? request) =>
         return Results.BadRequest(new { success = false, message = "外送訂單必須填寫地址" });
     }
 
-    var orderId = $"ORD-{DateTime.Now:yyyyMMdd}-{ordersDb.Count + 1:D3}";
-    var createdAt = DateTime.UtcNow.ToString("o");
-
-    var detailItems = request.Items.Select(item =>
+    var detailItems = new List<OrderDetailItem>();
+    foreach (var item in request.Items)
     {
-        var sideNames = item.Sides != null && item.Sides.Count > 0
-            ? item.Sides.Select(s => s.Name).ToList()
-            : new List<string>();
+        if (item is null || string.IsNullOrWhiteSpace(item.DishId) || item.Quantity <= 0 || item.Subtotal < 0)
+        {
+            return Results.BadRequest(new { success = false, message = "訂單品項資料無效" });
+        }
 
-        return new OrderDetailItem(
-            DishName: item.DishName,
+        var menuItem = await store.GetMenuItemAsync(item.DishId, cancellationToken);
+        if (menuItem is null)
+        {
+            return Results.BadRequest(new { success = false, message = $"找不到料理：{item.DishId}" });
+        }
+
+        var dish = menuItem.Value;
+        var estimatedPrepMinutes = dish.GetProperty("details").GetProperty("prepTimeMinutes").GetInt32();
+        var sideNames = item.Sides?.Select(side => side?.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .ToList() ?? [];
+
+        detailItems.Add(new OrderDetailItem(
+            DishName: dish.GetProperty("name").GetString()!,
             CustomPreferences: item.CustomPreferences ?? "標準風味",
             Sides: sideNames,
+            EstimatedPrepMinutes: estimatedPrepMinutes,
             Quantity: item.Quantity,
             Subtotal: item.Subtotal
-        );
-    }).ToList();
+        ));
+    }
+
+    var createdAt = DateTimeOffset.UtcNow;
+    var estimatedOrderPrepMinutes = detailItems.Max(item => item.EstimatedPrepMinutes);
+    var estimatedReadyAt = createdAt.AddMinutes(estimatedOrderPrepMinutes);
 
     var orderDetail = new OrderDetailDto(
-        OrderId: orderId,
+        OrderId: "",
         Status: "料理製作中",
+        EstimatedPrepMinutes: estimatedOrderPrepMinutes,
+        EstimatedReadyAt: estimatedReadyAt,
+        StatusUpdatedAt: createdAt,
         CustomerName: request.CustomerName,
         Phone: request.Phone,
-        DiningType: diningType ?? "內用",
+        DiningType: diningType,
         TableNo: tableNo ?? "無",
         Address: address ?? "",
         Note: request.Note ?? "",
@@ -334,28 +375,79 @@ app.MapPost("/api/orders", (CreateOrderRequest? request) =>
         CreatedAt: createdAt
     );
 
-    ordersDb[orderId] = orderDetail;
+    var orderId = await store.CreateOrderAsync(orderDetail, cancellationToken);
 
     return Results.Ok(new
     {
         success = true,
         orderId,
         message = "日式料理訂單建立成功",
-        createdAt
+        createdAt,
+        estimatedPrepMinutes = estimatedOrderPrepMinutes,
+        estimatedReadyAt,
+        status = orderDetail.Status
     });
 });
 
-// 3號 API: 訂單狀態與明細查詢 (/api/orders/{orderId})
-app.MapGet("/api/orders/{orderId}", (string orderId) =>
+// 4號 API: 訂單狀態與明細查詢 (/api/orders/{orderId})
+app.MapGet("/api/orders/{orderId}", async (string orderId, CancellationToken cancellationToken) =>
 {
-    if (ordersDb.TryGetValue(orderId, out var order))
+    var order = await store.SyncOrderStatusAsync(orderId, cancellationToken);
+    if (order is not null)
     {
         return Results.Ok(order);
     }
     return Results.NotFound(new { message = $"找不到訂單：{orderId}" });
-});
+})
+    .WithName("GetOrderById")
+    .WithSummary("查詢訂單明細與目前狀態")
+    .WithDescription("依預估製作時間同步訂單狀態後，回傳訂單明細。")
+    .Produces<OrderDetailDto>(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status404NotFound);
+
+// 5號 API: 依預估製作時間同步訂單狀態
+app.MapPatch("/api/orders/{orderId}/status", async (string orderId, CancellationToken cancellationToken) =>
+{
+    var order = await store.SyncOrderStatusAsync(orderId, cancellationToken);
+    if (order is null)
+    {
+        return Results.NotFound(new { message = $"找不到訂單：{orderId}" });
+    }
+
+    return Results.Ok(new
+    {
+        success = true,
+        orderId = order.OrderId,
+        status = order.Status,
+        estimatedReadyAt = order.EstimatedReadyAt,
+        statusUpdatedAt = order.StatusUpdatedAt,
+        message = "訂單狀態已同步"
+    });
+})
+    .WithName("SyncOrderStatus")
+    .WithSummary("依預估製作時間同步訂單狀態")
+    .WithDescription("使用伺服器時間與預估完成時間更新狀態；不接受呼叫端指定狀態。")
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status404NotFound);
 
 app.Run();
+
+static string FindProjectRoot(string contentRoot)
+{
+    var startPaths = new[] { AppContext.BaseDirectory, contentRoot, Directory.GetCurrentDirectory() };
+    foreach (var startPath in startPaths)
+    {
+        for (var directory = new DirectoryInfo(startPath); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "src", "TofuShopApi.csproj")))
+            {
+                return directory.FullName;
+            }
+        }
+    }
+
+    return contentRoot;
+}
 
 // 資料模型
 public record OrderSideItem(
@@ -388,6 +480,7 @@ public record OrderDetailItem(
     string DishName,
     string CustomPreferences,
     List<string> Sides,
+    int EstimatedPrepMinutes,
     int Quantity,
     int Subtotal
 );
@@ -395,6 +488,9 @@ public record OrderDetailItem(
 public record OrderDetailDto(
     string OrderId,
     string Status,
+    int EstimatedPrepMinutes,
+    DateTimeOffset EstimatedReadyAt,
+    DateTimeOffset StatusUpdatedAt,
     string CustomerName,
     string Phone,
     string DiningType,
@@ -403,5 +499,18 @@ public record OrderDetailDto(
     string Note,
     int TotalAmount,
     List<OrderDetailItem> Items,
-    string CreatedAt
+    DateTimeOffset CreatedAt
 );
+
+public sealed class OrderStatusBackgroundService(SqliteStore store) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        do
+        {
+            await store.CompleteDueOrdersAsync(DateTimeOffset.UtcNow, stoppingToken);
+        }
+        while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+}
