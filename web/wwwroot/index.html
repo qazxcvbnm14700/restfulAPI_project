@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>弦月・本格日式料理屋 | 線上即時點餐系統</title>
+  <meta name="description" content="職人炭火炙烤鰻魚、慢熬18小時豚骨拉麵、日本A5和牛丼，點擊圖片查看料理詳情與專屬副餐搭配，線上輕鬆下單。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 頂部導覽列 -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-crest">🏮</div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1>弦月</h1>
+            <span class="brand-jp">げんげつ・本格和食</span>
+          </div>
+          <span class="brand-sub">職人炭火炙烤・慢熬濃湯・旬鮮直送</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button id="track-order-btn" class="nav-track-btn" type="button">
+          <span class="btn-icon">🔍</span> 訂單進度查詢
+        </button>
+        <a href="#cart-section" class="cart-badge-btn" id="view-cart-nav">
+          <span class="cart-icon">🍱</span> 點餐清單
+          <span id="cart-count-badge" class="badge">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主視覺和風橫幅 -->
+  <section class="hero-banner">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-tag-wrap">
+        <span class="hero-badge">本格職人手作</span>
+        <span class="hero-badge gold">旬の味覚</span>
+      </div>
+      <h2>一期一會・細品極致日式旬味</h2>
+      <p class="hero-subtitle">嚴選日本直輸越光米、特級黑毛和牛與外銷頂級鰻魚，每一道料理皆備有專屬搭配的極上副餐。點擊餐點圖片，探索料理背後的匠心堅持與風味故事。</p>
+      <div class="hero-highlights">
+        <div class="highlight-item">
+          <span class="hl-icon">🥢</span>
+          <div>
+            <strong>點擊圖片即現詳情</strong>
+            <small>嚴選食材與產地故事完整透明</small>
+          </div>
+        </div>
+        <div class="highlight-item">
+          <span class="hl-icon">🍢</span>
+          <div>
+            <strong>各餐點專屬副餐</strong>
+            <small>依據主餐特性精選不同搭配選擇</small>
+          </div>
+        </div>
+        <div class="highlight-item">
+          <span class="hl-icon">⚡</span>
+          <div>
+            <strong>現點現做・即時追蹤</strong>
+            <small>下單即時入單，隨時查詢製作狀態</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 分類篩選列 -->
+  <nav class="category-nav-wrap">
+    <div class="category-container" id="category-pills">
+      <!-- 動態渲染類別按鈕 -->
+    </div>
+  </nav>
+
+  <!-- 主體區域：菜單商品列表與右側購物車 -->
+  <main class="main-container">
+    <div class="menu-layout">
+      
+      <!-- 左側：料理清單展示區 -->
+      <section class="menu-section" aria-labelledby="menu-heading">
+        <div class="section-title-wrap">
+          <div class="title-with-jp">
+            <span class="jp-ruby">おしながき</span>
+            <h2 id="menu-heading">御品書・極上料理</h2>
+          </div>
+          <p class="section-desc">請點選任一料理圖片，即可展開詳細食材介紹、特色賞味筆記，並挑選該料理的專屬副餐搭配。</p>
+        </div>
+
+        <!-- 料理網格 (動態渲染) -->
+        <div id="dishes-grid" class="dishes-grid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>正在為您呈上職人菜單，請稍候...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右側：訂單購物車與顧客資料 -->
+      <aside class="cart-section" id="cart-section" aria-labelledby="cart-heading">
+        <div class="cart-card">
+          <div class="cart-header">
+            <div class="cart-header-title">
+              <span class="cart-header-icon">🍱</span>
+              <h2 id="cart-heading">目前點餐清單</h2>
+            </div>
+            <button type="button" id="clear-cart-btn" class="text-btn" title="清空購物車">清空</button>
+          </div>
+
+          <!-- 購物車清單 -->
+          <div id="cart-items-container" class="cart-items">
+            <div class="empty-cart-msg">
+              <span class="empty-icon">🍣</span>
+              <p>點餐清單目前尚無餐點</p>
+              <small>點擊左側餐點圖片查看詳情，挑選專屬副餐加入清單吧！</small>
+            </div>
+          </div>
+
+          <div class="cart-divider"></div>
+
+          <!-- 金額加總 -->
+          <div class="cart-summary">
+            <div class="summary-row">
+              <span>料理總份數</span>
+              <span id="summary-total-qty">0 份</span>
+            </div>
+            <div class="summary-row total">
+              <span>應付總額</span>
+              <span id="summary-total-amount" class="highlight-price">NT$ 0</span>
+            </div>
+          </div>
+
+          <!-- 顧客用餐資訊填寫表單 -->
+          <form id="order-form" class="order-form">
+            <div class="form-header-row">
+              <span class="form-badge">ご注文情報</span>
+              <h3 class="form-title">顧客用餐資訊</h3>
+            </div>
+
+            <div class="form-group">
+              <label for="cust-name">顧客姓名 <span class="required-mark">*</span></label>
+              <input type="text" id="cust-name" required placeholder="例如：佐藤健太 或 王小明">
+            </div>
+
+            <div class="form-group">
+              <label for="cust-phone">連絡電話 <span class="required-mark">*</span></label>
+              <input type="tel" id="cust-phone" required placeholder="例如：0912345678" pattern="[0-9]{9,11}">
+            </div>
+
+            <div class="form-group">
+              <label>用餐方式 <span class="required-mark">*</span></label>
+              <div class="radio-pill-group">
+                <label class="radio-pill">
+                  <input type="radio" name="diningType" value="內用" checked>
+                  <span>內用入座</span>
+                </label>
+                <label class="radio-pill">
+                  <input type="radio" name="diningType" value="外帶">
+                  <span>外帶自取</span>
+                </label>
+                <label class="radio-pill">
+                  <input type="radio" name="diningType" value="外送">
+                  <span>和風外送</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" id="table-no-group">
+              <label for="table-no">內用桌號</label>
+              <input type="text" id="table-no" placeholder="例如：3號桌、板前2號 (外帶或未入座可免填)">
+            </div>
+
+            <div class="form-group">
+              <label for="cust-note">備註與客製需求</label>
+              <input type="text" id="cust-note" placeholder="例如：醬汁分開附、請備兒童餐具、無辣">
+            </div>
+
+            <button type="submit" class="submit-order-btn" id="submit-order-btn">
+              <span class="btn-text">確認送出訂單</span>
+              <span class="btn-sub">現點現做・由料理長精心烹調</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- 商品詳細資訊與專屬副餐彈窗 (核心互動 Modal) -->
+  <div class="modal-backdrop" id="dish-detail-modal" hidden>
+    <div class="modal-card dish-detail-card" role="dialog" aria-modal="true" aria-labelledby="modal-dish-title">
+      <button type="button" class="close-modal-btn" id="close-dish-modal" aria-label="關閉料理詳情">✕</button>
+      
+      <div class="dish-detail-layout">
+        <!-- 料理大圖與標籤 -->
+        <div class="dish-detail-image-wrap">
+          <img id="modal-dish-img" src="" alt="料理照片" class="dish-detail-img">
+          <div class="dish-detail-img-badges" id="modal-dish-badges">
+            <!-- 動態加入標籤 -->
+          </div>
+        </div>
+
+        <!-- 料理內容與專屬副餐選擇 -->
+        <div class="dish-detail-body">
+          <div class="dish-title-header">
+            <div>
+              <span class="dish-sub-name" id="modal-dish-subname">料理日文名稱</span>
+              <h2 class="dish-main-name" id="modal-dish-title">料理名稱</h2>
+            </div>
+            <div class="dish-price-box">
+              <span class="currency">NT$</span>
+              <span class="price-val" id="modal-dish-price">0</span>
+            </div>
+          </div>
+
+          <p class="dish-full-desc" id="modal-dish-desc">料理詳細介紹</p>
+
+          <!-- 料理履歷與食材特色卡 -->
+          <div class="dish-specs-card">
+            <div class="spec-row">
+              <span class="spec-label">🌱 嚴選食材：</span>
+              <div class="spec-tags" id="modal-dish-ingredients"></div>
+            </div>
+            <div class="spec-meta-grid">
+              <div class="meta-item">
+                <span class="meta-icon">🗾</span>
+                <div>
+                  <span class="meta-title">產地履歷</span>
+                  <span class="meta-desc" id="modal-dish-origin">-</span>
+                </div>
+              </div>
+              <div class="meta-item">
+                <span class="meta-icon">⏱️</span>
+                <div>
+                  <span class="meta-title">預估製作時間</span>
+                  <span class="meta-desc" id="modal-dish-preptime">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 料理風味客製選項 (若有) -->
+          <div class="custom-options-container" id="modal-dish-custom-options">
+            <!-- 動態渲染風味客製按鈕群 -->
+          </div>
+
+          <!-- 核心：專屬副餐搭配選擇區 -->
+          <div class="dish-sides-section">
+            <div class="sides-header">
+              <div class="sides-title">
+                <span class="side-badge">專屬副餐推薦</span>
+                <h3>搭配本道料理之專屬副餐</h3>
+              </div>
+              <span class="sides-hint">每道料理副餐皆由主廚特別配搭，可自由複選</span>
+            </div>
+            <div class="sides-list" id="modal-dish-sides-list">
+              <!-- 動態渲染本道料理專屬副餐選項 -->
+            </div>
+          </div>
+
+          <!-- 底部小計與加入購物車 -->
+          <div class="dish-detail-footer">
+            <div class="qty-subtotal-row">
+              <div class="quantity-control">
+                <button type="button" class="qty-btn" id="modal-qty-minus" aria-label="減少數量">-</button>
+                <span id="modal-qty-value" class="qty-display">1</span>
+                <button type="button" class="qty-btn" id="modal-qty-plus" aria-label="增加數量">+</button>
+              </div>
+              <div class="price-breakdown">
+                <span class="breakdown-label">單份金額（含副餐）：<strong id="modal-single-calc">NT$ 0</strong></span>
+                <span class="breakdown-total">合計：<strong id="modal-subtotal-calc">NT$ 0</strong></span>
+              </div>
+            </div>
+            <button type="button" class="primary-action-btn" id="modal-add-cart-btn">
+              🍱 將料理與副餐加入點餐清單
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下單成功確認彈窗 Modal -->
+  <div class="modal-backdrop" id="success-modal" hidden>
+    <div class="modal-card status-modal-card">
+      <div class="modal-crest-icon">🌸</div>
+      <h3>點餐成功！誠摯感謝您的光臨</h3>
+      <p>料理長已收到您的訂單，即刻為您現點現做，請耐心等候美味出餐！</p>
+      
+      <div class="order-receipt-box">
+        <div class="receipt-row">
+          <span>訂單編號</span>
+          <strong id="modal-order-id" class="highlight-order-id">ORD-XXXXXXXX</strong>
+        </div>
+        <div class="receipt-row">
+          <span>取餐姓名</span>
+          <span id="modal-cust-name">-</span>
+        </div>
+        <div class="receipt-row">
+          <span>用餐方式</span>
+          <span id="modal-dining-type">-</span>
+        </div>
+        <div class="receipt-row">
+          <span>結帳總額</span>
+          <strong id="modal-total-amount">NT$ 0</strong>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="action-btn secondary" id="modal-query-order-btn">🔍 即時查詢製作進度</button>
+        <button type="button" class="action-btn primary" id="modal-close-btn">繼續瀏覽菜單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 訂單進度查詢彈窗 Modal -->
+  <div class="modal-backdrop" id="tracking-modal" hidden>
+    <div class="modal-card status-modal-card">
+      <div class="modal-header-row">
+        <div class="title-with-jp">
+          <span class="jp-ruby">ちゅうもんかくにん</span>
+          <h3>🔍 查詢訂單製作進度</h3>
+        </div>
+        <button type="button" class="close-x-btn" id="close-tracking-btn" aria-label="關閉">✕</button>
+      </div>
+      
+      <div class="tracking-search-bar">
+        <input type="text" id="search-order-input" placeholder="請輸入訂單編號 (例如 ORD-20261016-001)">
+        <button type="button" class="action-btn primary" id="do-search-btn">查詢</button>
+      </div>
+
+      <div id="tracking-result-box" class="tracking-result-box" hidden>
+        <!-- 動態渲染查詢結果 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 頁尾 -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="footer-logo">🏮 弦月・本格日式料理屋</span>
+        <p>厳選食材と職人の技が織りなす、極上の日本料理をお届けします。</p>
+      </div>
+      <div class="footer-meta">
+        <p>營業時間：每日 11:30 - 14:30、17:30 - 21:30</p>
+        <p>門市電話：(02) 2345-8899 | 門市地址：台北市大安區和風町八番地</p>
+        <small>© 2026 弦月和食餐飲事業股份有限公司. All Rights Reserved.</small>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

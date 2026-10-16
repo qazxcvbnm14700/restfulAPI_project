@@ -1,0 +1,356 @@
+using System.Collections.Concurrent;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 開發與測試支援 CORS 與靜態檔案
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+var app = builder.Build();
+
+app.UseCors();
+
+// 支援自動偵測 web/wwwroot 靜態檔案目錄 (支援從 /src 執行或從 /web/bin 執行)
+string[] searchPaths = new[]
+{
+    Path.Combine(AppContext.BaseDirectory, "..", "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "web", "wwwroot"),
+    Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+};
+
+string? foundWwwroot = searchPaths
+    .Select(p => Path.GetFullPath(p))
+    .FirstOrDefault(p => Directory.Exists(p) && File.Exists(Path.Combine(p, "index.html")));
+
+if (foundWwwroot != null)
+{
+    var fileServerOptions = new FileServerOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(foundWwwroot),
+        RequestPath = "",
+        EnableDefaultFiles = true
+    };
+    app.UseFileServer(fileServerOptions);
+}
+
+// 記憶體存儲訂單資料
+var ordersDb = new ConcurrentDictionary<string, OrderDetailDto>();
+
+// 1號 API: 日式料理菜單、料理詳情與專屬副餐查詢 (/api/menu)
+app.MapGet("/api/menu", () =>
+{
+    var menu = new
+    {
+        restaurantName = "弦月・本格日式料理屋",
+        tagline = "職人炭火炙烤・慢熬豚骨白湯・築地旬魚直送",
+        categories = new[] { "全部料理", "人氣推薦", "經典拉麵", "和風定食" },
+        items = new object[]
+        {
+            new
+            {
+                id = "dish-1",
+                name = "特上蒲燒鰻魚飯",
+                subName = "とくじょう うなぎどん (Unagi Don)",
+                category = "人氣推薦",
+                price = 380,
+                image = "images/unagi.jpg",
+                badge = "主廚招牌",
+                description = "嚴選外銷等級頂級白鰻，經炭火慢烤三道蒲燒工法，刷上傳承百年甘醇秘醬，油脂豐腴入口即化，佐日本新潟越光米。",
+                details = new
+                {
+                    ingredients = new[] { "日本靜岡特選鰻魚", "新潟縣產越光米", "百年秘傳照燒汁", "有田山椒粉" },
+                    origin = "台灣在地優質外銷無毒鰻魚直送",
+                    prepTime = "約 12-15 分鐘",
+                    flavorTags = new[] { "炭火香氣", "油脂豐美", "主廚手作", "人氣 No.1" }
+                },
+                customOptions = new
+                {
+                    riceAmount = new[] { "標準飯量", "增量大盛 (+0元)", "少飯 (-30g)" },
+                    flavor = new[] { "標準醬汁", "醬汁增量", "少醬清爽" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-unagi-1", name = "日式蒲燒鰻手卷", price = 60, description = "香酥海苔包覆蒲燒鰻與現切小黃瓜" },
+                    new { id = "side-unagi-2", name = "極品鰻魚肝清湯", price = 40, description = "古法鰹魚昆布高湯清甜甘潤" },
+                    new { id = "side-unagi-3", name = "和風干貝茶碗蒸", price = 35, description = "滑嫩高湯蒸蛋佐青森帆立貝" },
+                    new { id = "side-unagi-4", name = "柚子白蘿蔔漬物", price = 25, description = "高知縣產柚子醋清脆爽口解膩" }
+                }
+            },
+            new
+            {
+                id = "dish-2",
+                name = "招牌特濃豚骨叉燒拉麵",
+                subName = "とんこつ チャーシューメン (Tonkotsu Ramen)",
+                category = "經典拉麵",
+                price = 240,
+                image = "images/ramen.jpg",
+                badge = "人氣熱銷",
+                description = "熬煮18小時以上的大骨與豚脂乳化出純白濃郁湯頭，佐特製炙燒五花厚切叉燒、黃金流心溏心蛋與日本博多極細麵。",
+                details = new
+                {
+                    ingredients = new[] { "博多極細生麵", "慢火乳化豚骨白湯", "炙燒五花厚切叉燒 (2片)", "黃金流心溏心蛋", "有明海苔", "高知青蔥" },
+                    origin = "每日晨起鮮熬黑豚豚骨高湯",
+                    prepTime = "約 8-10 分鐘",
+                    flavorTags = new[] { "濃厚白湯", "炙燒焦香", "爆汁溏心", "拉麵魂" }
+                },
+                customOptions = new
+                {
+                    noodleFirmness = new[] { "麵硬 (博多風)", "適中", "偏軟" },
+                    soupRichness = new[] { "道地日式濃味", "台灣標準", "清淡少油" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-ramen-1", name = "博多替玉 (加麵一份)", price = 30, description = "現煮極細生拉麵" },
+                    new { id = "side-ramen-2", name = "日式唐揚炸雞 (4塊)", price = 65, description = "秘醃去骨雞腿肉，外酥內爆汁" },
+                    new { id = "side-ramen-3", name = "特製黃金煎餃 (5顆)", price = 55, description = "日式冰花脆皮，黑豚鮮肉餡" },
+                    new { id = "side-ramen-4", name = "炙燒厚切叉燒 (增量2片)", price = 50, description = "特選五花低溫慢煮再炙烤" },
+                    new { id = "side-ramen-5", name = "招牌黃金溏心蛋", price = 25, description = "柴魚秘醬低溫浸漬流心" }
+                }
+            },
+            new
+            {
+                id = "dish-3",
+                name = "極上黑毛和牛丼",
+                subName = "くろげわぎゅうどん (Wagyu Beef Don)",
+                category = "人氣推薦",
+                price = 320,
+                image = "images/wagyu.jpg",
+                badge = "極致奢華",
+                description = "嚴選日本A5級黑毛和牛薄切片，以甘甜洋蔥、清酒與特級本釀造醬油溫火慢燉，搭配生食級有機鮮蛋黃，肉質極致柔嫩細膩。",
+                details = new
+                {
+                    ingredients = new[] { "日本A5黑毛和牛", "淡路島甜洋蔥", "生食級初卵蛋", "新潟越光米", "七味唐辛子" },
+                    origin = "日本鹿兒島直送A5黑毛和牛",
+                    prepTime = "約 10-12 分鐘",
+                    flavorTags = new[] { "油花如雪", "入口即化", "濃郁蛋香", "奢華盛宴" }
+                },
+                customOptions = new
+                {
+                    riceAmount = new[] { "標準飯量", "大盛多飯 (+0元)", "少飯" },
+                    scallion = new[] { "多蔥 (免費增量)", "正常青蔥", "不要蔥" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-wagyu-1", name = "日本生食級溫泉蛋", price = 25, description = "恆溫低溫熟成滑嫩水潤" },
+                    new { id = "side-wagyu-2", name = "主廚鮮魚味噌湯", price = 35, description = "赤味噌與時令鮮魚豆腐熬製" },
+                    new { id = "side-wagyu-3", name = "日式胡麻秋葵冷盤", price = 30, description = "日本焙煎芝麻醬清脆爽口" },
+                    new { id = "side-wagyu-4", name = "北海道起司可樂餅", price = 45, description = "金黃酥脆馬鈴薯爆漿流心起司" }
+                }
+            },
+            new
+            {
+                id = "dish-4",
+                name = "極黑里肌炸豬排定食",
+                subName = "とんかつ ていしょく (Tonkatsu Set)",
+                category = "和風定食",
+                price = 260,
+                image = "images/tonkatsu.jpg",
+                badge = "定食定番",
+                description = "嚴選厚切黑豚大里肌，裹上鮮生麵包粉經兩道低溫熱油酥炸，外皮酥脆不油膩，肉質多汁飽滿，隨附高麗菜絲與秘磨芝麻豬排醬。",
+                details = new
+                {
+                    ingredients = new[] { "特選厚切黑豚大里肌 (200g)", "日式生麵包粉", "越光米飯", "特調赤味噌湯", "高山高麗菜絲" },
+                    origin = "台灣在地優良履歷黑豚",
+                    prepTime = "約 12-15 分鐘",
+                    flavorTags = new[] { "厚切紮實", "酥脆金黃", "肉汁噴發", "定食經典" }
+                },
+                customOptions = new
+                {
+                    riceAmount = new[] { "越光米 (標準)", "越光米 (大盛免費)", "少飯" },
+                    sauceStyle = new[] { "現磨芝麻豬排醬", "和風柚子芥末醬" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-tonkatsu-1", name = "廣島炸牡蠣 (2顆)", price = 75, description = "日本瀨戶內海產鮮美牡蠣酥炸" },
+                    new { id = "side-tonkatsu-2", name = "高湯茶碗蒸", price = 35, description = "高湯蒸蛋香氣醇厚" },
+                    new { id = "side-tonkatsu-3", name = "越光白米飯增量", price = 20, description = "單點一碗Q彈香甜白飯" },
+                    new { id = "side-tonkatsu-4", name = "宇治抹茶白玉甜湯", price = 50, description = "京都抹茶與Q彈手作白玉" }
+                }
+            },
+            new
+            {
+                id = "dish-5",
+                name = "炙燒鮭魚親子丼",
+                subName = "さけ おやこどん (Aburi Salmon Don)",
+                category = "人氣推薦",
+                price = 290,
+                image = "images/salmon.jpg",
+                badge = "當日鮮採",
+                description = "新鮮空運挪威大西洋鮭魚，表面經直火微炙釋放誘人油脂香氣，搭配晶瑩剔透、在口中爆漿的醬油漬鮭魚卵與天然紫蘇葉。",
+                details = new
+                {
+                    ingredients = new[] { "挪威深海鮭魚厚切 (5片)", "北海道醬油漬鮭魚卵", "日本大葉紫蘇", "現磨阿里山生山葵", "赤酢壽司飯" },
+                    origin = "挪威空運生食級冷藏鮭魚",
+                    prepTime = "約 8-10 分鐘",
+                    flavorTags = new[] { "油脂豐美", "爆漿鮭魚卵", "直火炙香", "老饕最愛" }
+                },
+                customOptions = new
+                {
+                    riceType = new[] { "赤醋壽司醋飯", "溫熱越光白飯" },
+                    wasabi = new[] { "附現磨山葵 (分開附)", "去山葵" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-salmon-1", name = "炙燒鮭魚肚握壽司 (2貫)", price = 70, description = "油花極致豐富的鮭魚肚握壽司" },
+                    new { id = "side-salmon-2", name = "鮮蝦蘆筍手卷", price = 55, description = "新鮮草蝦、鮮脆蘆筍與日式美乃滋" },
+                    new { id = "side-salmon-3", name = "極上蟹肉茶碗蒸", price = 50, description = "特選松葉蟹肉絲點綴高湯蒸蛋" },
+                    new { id = "side-salmon-4", name = "鮭魚荒焚味噌湯", price = 45, description = "鮮甜鮭魚骨肉與白味噌細火熬煮" }
+                }
+            },
+            new
+            {
+                id = "dish-6",
+                name = "大海老天婦羅蕎麥麵",
+                subName = "てんぷら そば (Tempura Soba)",
+                category = "和風定食",
+                price = 220,
+                image = "images/tempura.jpg",
+                badge = "清雅道地",
+                description = "信州二八蕎麥麵吸附甘甜優雅的鰹魚昆布柴魚高湯，佐以兩大尾金黃羽衣炸大蝦與時令南瓜、地瓜、香菇野菜天婦羅。",
+                details = new
+                {
+                    ingredients = new[] { "長野信州二八蕎麥麵", "野生特大草蝦 (2尾)", "時令野菜天婦羅", "枕崎產本枯節柴魚高湯", "鳴門魚板" },
+                    origin = "日本長野產蕎麥粉手打製作",
+                    prepTime = "約 10-12 分鐘",
+                    flavorTags = new[] { "金黃酥脆", "清甜柴魚高湯", "天然蕎麥香", "溫和順口" }
+                },
+                customOptions = new
+                {
+                    servingStyle = new[] { "暖心熱湯麵", "冰鎮冷沾麵 (附沾汁)" },
+                    scallion = new[] { "多蔥花", "正常蔥花", "不要蔥" }
+                },
+                sides = new[]
+                {
+                    new { id = "side-tempura-1", name = "追加炸大海老 (一尾)", price = 60, description = "金黃酥脆特選野生大蝦" },
+                    new { id = "side-tempura-2", name = "揚出和風豆腐", price = 40, description = "外酥內嫩佐日式鰹魚醬汁與蘿蔔泥" },
+                    new { id = "side-tempura-3", name = "和風芥末山葵章魚", price = 45, description = "清脆章魚佐特調山葵風味冷菜" },
+                    new { id = "side-tempura-4", name = "冰鎮玄米抹茶", price = 30, description = "無糖炒焙玄米香氣冷泡茶" }
+                }
+            }
+        }
+    };
+    return Results.Ok(menu);
+});
+
+// 2號 API: 建立日式料理新訂單 (/api/orders)
+app.MapPost("/api/orders", (CreateOrderRequest? request) =>
+{
+    if (request == null || string.IsNullOrWhiteSpace(request.CustomerName) || string.IsNullOrWhiteSpace(request.Phone))
+    {
+        return Results.BadRequest(new { success = false, message = "顧客姓名與電話為必填欄位" });
+    }
+
+    if (request.Items == null || request.Items.Count == 0)
+    {
+        return Results.BadRequest(new { success = false, message = "訂單品項不能為空" });
+    }
+
+    var orderId = $"ORD-{DateTime.Now:yyyyMMdd}-{ordersDb.Count + 1:D3}";
+    var createdAt = DateTime.UtcNow.ToString("o");
+
+    var detailItems = request.Items.Select(item =>
+    {
+        var sideNames = item.Sides != null && item.Sides.Count > 0
+            ? item.Sides.Select(s => s.Name).ToList()
+            : new List<string>();
+
+        return new OrderDetailItem(
+            DishName: item.DishName,
+            CustomPreferences: item.CustomPreferences ?? "標準風味",
+            Sides: sideNames,
+            Quantity: item.Quantity,
+            Subtotal: item.Subtotal
+        );
+    }).ToList();
+
+    var orderDetail = new OrderDetailDto(
+        OrderId: orderId,
+        Status: "料理製作中",
+        CustomerName: request.CustomerName,
+        Phone: request.Phone,
+        DiningType: request.DiningType ?? "內用",
+        TableNo: request.TableNo ?? "無",
+        Note: request.Note ?? "",
+        TotalAmount: request.TotalAmount,
+        Items: detailItems,
+        CreatedAt: createdAt
+    );
+
+    ordersDb[orderId] = orderDetail;
+
+    return Results.Ok(new
+    {
+        success = true,
+        orderId,
+        message = "日式料理訂單建立成功",
+        createdAt
+    });
+});
+
+// 3號 API: 訂單狀態與明細查詢 (/api/orders/{orderId})
+app.MapGet("/api/orders/{orderId}", (string orderId) =>
+{
+    if (ordersDb.TryGetValue(orderId, out var order))
+    {
+        return Results.Ok(order);
+    }
+    return Results.NotFound(new { message = $"找不到訂單：{orderId}" });
+});
+
+app.Run();
+
+// 資料模型
+public record OrderSideItem(
+    string? Id,
+    string Name,
+    int Price
+);
+
+public record CreateOrderItem(
+    string DishId,
+    string DishName,
+    string? CustomPreferences,
+    List<OrderSideItem>? Sides,
+    int Quantity,
+    int Subtotal
+);
+
+public record CreateOrderRequest(
+    string CustomerName,
+    string Phone,
+    string? DiningType,
+    string? TableNo,
+    string? Note,
+    List<CreateOrderItem> Items,
+    int TotalAmount
+);
+
+public record OrderDetailItem(
+    string DishName,
+    string CustomPreferences,
+    List<string> Sides,
+    int Quantity,
+    int Subtotal
+);
+
+public record OrderDetailDto(
+    string OrderId,
+    string Status,
+    string CustomerName,
+    string Phone,
+    string DiningType,
+    string TableNo,
+    string Note,
+    int TotalAmount,
+    List<OrderDetailItem> Items,
+    string CreatedAt
+);
