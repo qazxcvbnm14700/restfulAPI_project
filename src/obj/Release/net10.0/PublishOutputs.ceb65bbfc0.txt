@@ -1,0 +1,9 @@
+C:\Users\User\Desktop\restfulAPI_project\web\bin\TofuShopApi.exe
+C:\Users\User\Desktop\restfulAPI_project\web\bin\appsettings.Development.json
+C:\Users\User\Desktop\restfulAPI_project\web\bin\appsettings.json
+C:\Users\User\Desktop\restfulAPI_project\web\bin\TofuShopApi.dll
+C:\Users\User\Desktop\restfulAPI_project\web\bin\TofuShopApi.deps.json
+C:\Users\User\Desktop\restfulAPI_project\web\bin\TofuShopApi.runtimeconfig.json
+C:\Users\User\Desktop\restfulAPI_project\web\bin\TofuShopApi.pdb
+C:\Users\User\Desktop\restfulAPI_project\web\bin\Microsoft.AspNetCore.OpenApi.dll
+C:\Users\User\Desktop\restfulAPI_project\web\bin\Microsoft.OpenApi.dll

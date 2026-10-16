@@ -21,6 +21,7 @@ const state = {
   cart: [],
   lastCreatedOrder: null
 };
+let dishDetailRequestId = 0;
 
 // DOM 元素快取
 const dom = {
@@ -177,8 +178,25 @@ function renderDishes() {
   });
 }
 
-// 2. 開啟料理詳細資訊與專屬副餐 Modal (核心互動)
-function openDishDetail(dish) {
+// 2. 點擊商品時呼叫詳細資訊 API，再顯示專屬副餐 Modal
+async function openDishDetail(menuItem) {
+  const requestId = ++dishDetailRequestId;
+
+  try {
+    const res = await fetch(`/api/menu/${encodeURIComponent(menuItem.id)}`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const dish = await res.json();
+    if (requestId !== dishDetailRequestId) return;
+
+    renderDishDetail(dish);
+  } catch (err) {
+    if (requestId !== dishDetailRequestId) return;
+    console.error('無法載入料理詳情:', err);
+    alert('無法載入料理詳情與專屬副餐，請稍後重試。');
+  }
+}
+
+function renderDishDetail(dish) {
   state.currentModalDish = dish;
 
   // 重置選擇狀態
@@ -347,6 +365,7 @@ function updateModalCalculation() {
 }
 
 function closeDishDetailModal() {
+  dishDetailRequestId++;
   dom.dishDetailModal.hidden = true;
   document.body.style.overflow = '';
   state.currentModalDish = null;
@@ -452,10 +471,23 @@ async function submitOrder(e) {
   const phone = document.getElementById('cust-phone').value.trim();
   const diningType = document.querySelector('input[name="diningType"]:checked')?.value || '內用';
   const tableNo = document.getElementById('table-no').value.trim();
+  const address = document.getElementById('delivery-address').value.trim();
   const note = document.getElementById('cust-note').value.trim();
 
   if (!custName || !phone) {
     alert('請填寫顧客姓名與連絡電話！');
+    return;
+  }
+
+  if (diningType === '內用' && !tableNo) {
+    alert('內用訂單請填寫桌號！');
+    document.getElementById('table-no').focus();
+    return;
+  }
+
+  if (diningType === '外送' && !address) {
+    alert('外送訂單請填寫地址！');
+    document.getElementById('delivery-address').focus();
     return;
   }
 
@@ -466,6 +498,7 @@ async function submitOrder(e) {
     phone: phone,
     diningType: diningType,
     tableNo: tableNo,
+    address: address,
     note: note,
     items: state.cart.map(it => ({
       dishId: it.dishId,
@@ -581,6 +614,7 @@ async function queryOrder(orderId) {
       <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 0.8rem; background: rgba(255,255,255,0.03); padding: 0.6rem 0.8rem; border-radius: 6px;">
         <div>顧客姓名：<strong>${escapeHtml(data.customerName)}</strong></div>
         <div>用餐方式：<strong>${escapeHtml(data.diningType)}</strong> ${data.tableNo && data.tableNo !== '無' ? `(${escapeHtml(data.tableNo)})` : ''}</div>
+        ${data.address ? `<div>外送地址：<strong>${escapeHtml(data.address)}</strong></div>` : ''}
         ${data.note ? `<div>顧客備註：${escapeHtml(data.note)}</div>` : ''}
         <div style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.2rem;">下單時間：${new Date(data.createdAt).toLocaleString('zh-TW')}</div>
       </div>
@@ -612,16 +646,28 @@ function showSuccessModal(orderId, name, diningType, amount) {
 
 function setupDiningTypeToggle() {
   const tableGroup = document.getElementById('table-no-group');
+  const tableInput = document.getElementById('table-no');
+  const addressGroup = document.getElementById('delivery-address-group');
+  const addressInput = document.getElementById('delivery-address');
   const radios = document.querySelectorAll('input[name="diningType"]');
+
+  const updateDiningFields = () => {
+    const diningType = document.querySelector('input[name="diningType"]:checked')?.value;
+    const isDineIn = diningType === '內用';
+    const isDelivery = diningType === '外送';
+
+    tableGroup.hidden = !isDineIn;
+    tableInput.disabled = !isDineIn;
+    tableInput.required = isDineIn;
+    addressGroup.hidden = !isDelivery;
+    addressInput.disabled = !isDelivery;
+    addressInput.required = isDelivery;
+  };
+
   radios.forEach(r => {
-    r.onchange = () => {
-      if (r.value === '內用') {
-        tableGroup.style.display = 'flex';
-      } else {
-        tableGroup.style.display = 'none';
-      }
-    };
+    r.onchange = updateDiningFields;
   });
+  updateDiningFields();
 }
 
 // 事件監聽綁定

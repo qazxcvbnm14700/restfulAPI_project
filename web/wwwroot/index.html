@@ -172,8 +172,13 @@
             </div>
 
             <div class="form-group" id="table-no-group">
-              <label for="table-no">內用桌號</label>
-              <input type="text" id="table-no" placeholder="例如：3號桌、板前2號 (外帶或未入座可免填)">
+              <label for="table-no">內用桌號 <span class="required-mark">*</span></label>
+              <input type="text" id="table-no" placeholder="例如：3號桌、板前2號">
+            </div>
+
+            <div class="form-group" id="delivery-address-group" hidden>
+              <label for="delivery-address">外送地址 <span class="required-mark">*</span></label>
+              <input type="text" id="delivery-address" autocomplete="street-address" placeholder="請輸入完整外送地址">
             </div>
 
             <div class="form-group">

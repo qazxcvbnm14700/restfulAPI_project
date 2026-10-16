@@ -1250,6 +1250,10 @@ body {
   gap: 0.35rem;
 }
 
+.form-group[hidden] {
+  display: none;
+}
+
 .form-group label {
   font-size: 0.8rem;
   font-weight: 600;

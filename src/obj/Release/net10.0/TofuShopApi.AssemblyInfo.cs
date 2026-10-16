@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TofuShopApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6c8b4ef30c4058e23741564d0bd2f618d97f5cee")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6af4f9acce1d1b292dc84f662734df29ef857408")]
 [assembly: System.Reflection.AssemblyProductAttribute("TofuShopApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TofuShopApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

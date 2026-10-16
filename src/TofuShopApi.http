@@ -1,6 +1,41 @@
 @TofuShopApi_HostAddress = http://localhost:5109
 
-GET {{TofuShopApi_HostAddress}}/weatherforecast/
+### 商品清單
+GET {{TofuShopApi_HostAddress}}/api/menu
 Accept: application/json
 
-###
+### 商品詳細資訊與專屬副餐
+GET {{TofuShopApi_HostAddress}}/api/menu/dish-1
+Accept: application/json
+
+### 查詢不存在的商品
+GET {{TofuShopApi_HostAddress}}/api/menu/unknown-dish
+Accept: application/json
+
+### 建立日式料理訂單
+POST {{TofuShopApi_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "佐藤健太",
+  "phone": "0912345678",
+  "diningType": "內用",
+  "tableNo": "3號桌",
+  "address": "",
+  "note": "",
+  "items": [
+    {
+      "dishId": "dish-1",
+      "dishName": "特上蒲燒鰻魚飯",
+      "customPreferences": "標準飯量",
+      "sides": [],
+      "quantity": 1,
+      "subtotal": 380
+    }
+  ],
+  "totalAmount": 380
+}
+
+### 查詢訂單
+GET {{TofuShopApi_HostAddress}}/api/orders/ORD-20261016-001
+Accept: application/json

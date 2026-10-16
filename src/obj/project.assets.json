@@ -88,11 +88,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\User\\Desktop\\restful_project\\src\\TofuShopApi.csproj",
+      "projectUniqueName": "C:\\Users\\User\\Desktop\\restfulAPI_project\\src\\TofuShopApi.csproj",
       "projectName": "TofuShopApi",
-      "projectPath": "C:\\Users\\User\\Desktop\\restful_project\\src\\TofuShopApi.csproj",
+      "projectPath": "C:\\Users\\User\\Desktop\\restfulAPI_project\\src\\TofuShopApi.csproj",
       "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\User\\Desktop\\restful_project\\src\\obj\\",
+      "outputPath": "C:\\Users\\User\\Desktop\\restfulAPI_project\\src\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config"
